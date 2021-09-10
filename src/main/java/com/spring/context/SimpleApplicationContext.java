@@ -8,6 +8,7 @@ import com.spring.bean.BeanDefinition;
 import com.spring.bean.BeanRegistry;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,7 +42,7 @@ public class SimpleApplicationContext extends BeanRegistry {
         }
     }
 
-    public Object getBean(String beanName){
+    public Object getBean(String beanName) {
         BeanDefinition beanDefinition = getBeanDefinition(beanName);
         if(beanDefinition == null){
             throw new RuntimeException("bean " + beanName + " doesnt exist");
@@ -122,13 +123,13 @@ public class SimpleApplicationContext extends BeanRegistry {
         }
     }
 
-    private void createBeans(){
+    private void createBeans() {
         ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
         for(String beanName : beanDefinitionMap.keySet()){
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            System.out.println("creating bean：" + beanName);
             if("singleton".equals(beanDefinition.getScope()) && !beanDefinition.isLazyInit()){
                 Object bean = createBean(beanName,beanDefinition);
-                registerSingleton(beanName, bean);
             }
         }
     }

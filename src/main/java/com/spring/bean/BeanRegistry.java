@@ -2,8 +2,10 @@ package com.spring.bean;
 
 import com.spring.annotation.Autowired;
 import com.spring.annotation.Component;
+import com.spring.annotation.Scope;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,9 +32,9 @@ public class BeanRegistry {
     private final HashMap<String, Object> earlySingletonObjects = new HashMap<>(256);
 
     /**
-     * 正在创建的bean
+     * 正在创建的 bean
      */
-    private final Set<String> inCreationBeans = new HashSet<>(256);
+    private final Set<String> inCreation = new HashSet<>(256);
     /**
      * bean Definition map
      */
@@ -78,13 +80,25 @@ public class BeanRegistry {
      * @param beanDefinition beanDefinition
      * @return bean对象
      */
-    protected Object createBean(String beanName, BeanDefinition beanDefinition){
+    protected Object createBean(String beanName, BeanDefinition beanDefinition) {
         Class<?> beanClass = beanDefinition.getBeanClass();
+        // 设置bean inCreation
+        inCreation.add(beanName);
         Object instance;
-        // 推断构造方法
+        // 构造方法推断
         Constructor<?> constructor = chooseConstructor(beanClass);
-        System.out.println("constructor for : [" + beanName + "] = " + constructor);
-        instance = createInstance(constructor);
+
+        try {
+            // 实例化
+            instance = createInstance(constructor);
+        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
+            throw new RuntimeException("创建bean：" + beanName + "异常，无法实例化");
+        }
+
+        inCreation.remove(beanName);
+        if("singleton".equals(beanDefinition.getScope())){
+            registerSingleton(beanName, instance);
+        }
         return instance;
     }
 
@@ -102,6 +116,7 @@ public class BeanRegistry {
         Constructor<?> noArgsConstructor = null;
         Constructor<?> autowiredConstructor;
         for (Constructor<?> constructor : constructors) {
+
             // 有 @Autowired，且不是无参构造器
             if(constructor.isAnnotationPresent(Autowired.class) && constructor.getParameterCount() != 0){
                 Parameter[] parameters = constructor.getParameters();
@@ -134,8 +149,33 @@ public class BeanRegistry {
      * @param constructor 构造方法
      * @return bean 原始对象
      */
-    private Object createInstance(Constructor<?> constructor){
-        return null;
+    private Object createInstance(Constructor<?> constructor) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        Object[] parameters = new Object[constructor.getParameterCount()];
+        int index = 0;
+        for (Parameter parameter : constructor.getParameters()) {
+            Class<?> paramClass = parameter.getType();
+            Component component = paramClass.getDeclaredAnnotation(Component.class);
+            String beanName = component.value().length() == 0 ? parameter.getName() : component.value();
+            BeanDefinition beanDefinition = getBeanDefinition(beanName);
+            // 从单例池中取对象
+            if(singletonObjects.containsKey(beanName)){
+                parameters[index++] = singletonObjects.get(beanName);
+            }
+            /*
+                实例化阶段循环依赖检测
+             */
+            else if(inCreation.contains(beanName)){
+                throw new RuntimeException("实例化 " + beanName + " 发生循环依赖");
+            }
+            else{
+                // 创建bean
+                parameters[index++] = createBean(beanName, beanDefinition);
+            }
+
+        }
+
+        constructor.setAccessible(true);
+        return constructor.newInstance(parameters);
     }
 
     /**

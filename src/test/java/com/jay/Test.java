@@ -1,6 +1,9 @@
 package com.jay;
 
+import com.jay.service.OrderService;
 import com.spring.context.SimpleApplicationContext;
+
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * <p>
@@ -14,11 +17,8 @@ public class Test {
     public static void main(String[] args) {
         SimpleApplicationContext applicationContext = new SimpleApplicationContext(AppConfig.class);
 
-        System.out.println(applicationContext.getBean("user"));
-        System.out.println(applicationContext.getBean("user"));
-        System.out.println(applicationContext.getBean("user"));
+        System.out.println(applicationContext.getBean("userService"));
 
-        System.out.println(applicationContext.getBean("userService"));
-        System.out.println(applicationContext.getBean("userService"));
+        ((OrderService)applicationContext.getBean("orderService")).test();
     }
 }
