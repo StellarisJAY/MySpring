@@ -14,7 +14,7 @@ import java.net.URL;
  * @author Jay
  * @date 2021/9/10
  **/
-public class SimpleApplicationContext {
+public class SimpleApplicationContext extends SingletonBeanRegistry{
     /**
      * 配置类
      */
