@@ -36,11 +36,27 @@ public class SimpleApplicationContext extends BeanRegistry {
             // 组件扫描
             doComponentScan(basePackage, appClassLoader);
 
+            createBeans();
 
         }
     }
 
     public Object getBean(String beanName){
+        BeanDefinition beanDefinition = getBeanDefinition(beanName);
+        if(beanDefinition == null){
+            throw new RuntimeException("bean " + beanName + " doesnt exist");
+        }
+        if("singleton".equals(beanDefinition.getScope()) && !beanDefinition.isLazyInit()){
+            return getSingleton(beanName);
+        }
+        else if(beanDefinition.isLazyInit()){
+            Object bean = createBean(beanName,beanDefinition);
+            registerSingleton(beanName, bean);
+            return bean;
+        }
+        else if("prototype".equals(beanDefinition.getScope())){
+            return createBean(beanName, beanDefinition);
+        }
         return null;
     }
 
@@ -102,6 +118,17 @@ public class SimpleApplicationContext extends BeanRegistry {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private void createBeans(){
+        ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
+        for(String beanName : beanDefinitionMap.keySet()){
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            if("singleton".equals(beanDefinition.getScope()) && !beanDefinition.isLazyInit()){
+                Object bean = createBean(beanName,beanDefinition);
+                registerSingleton(beanName, bean);
             }
         }
     }
