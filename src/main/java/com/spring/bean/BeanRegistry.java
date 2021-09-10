@@ -1,4 +1,4 @@
-package com.spring.context;
+package com.spring.bean;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,12 +10,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Jay
  * @date 2021/9/10
  **/
-public class SingletonBeanRegistry {
+public class BeanRegistry {
     /**
      * 单例池
      */
     private final ConcurrentHashMap<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
+    /**
+     * bean Definition map
+     */
+    public final ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
     /**
      * 注册单例bean
      * @param beanName beanName
@@ -34,5 +38,24 @@ public class SingletonBeanRegistry {
             }
             singletonObjects.put(beanName, bean);
         }
+    }
+
+    /**
+     * 添加beanDefinition
+     * @param beanName beanName
+     * @param beanDefinition beanDef
+     */
+    protected void addBeanDefinition(String beanName, BeanDefinition beanDefinition){
+        synchronized (beanDefinitionMap){
+            BeanDefinition oldBeanDefinition = beanDefinitionMap.get(beanName);
+            if(oldBeanDefinition != null){
+                throw new IllegalStateException("无法注册名为：" + beanName + "的BeanDefinition，因为beanName已经被 " + oldBeanDefinition + " 使用");
+            }
+            beanDefinitionMap.put(beanName, beanDefinition);
+        }
+    }
+
+    protected Object createBean(String beanName, BeanDefinition beanDefinition){
+        return null;
     }
 }

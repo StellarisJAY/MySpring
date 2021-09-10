@@ -10,10 +10,5 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface Component {
-    /**
-     * beanName
-     * @return String
-     */
-    String value();
+public @interface IsLazy {
 }
