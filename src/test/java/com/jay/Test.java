@@ -1,6 +1,6 @@
 package com.jay;
 
-import com.spring.SimpleApplicationContext;
+import com.spring.context.SimpleApplicationContext;
 
 /**
  * <p>
@@ -12,6 +12,6 @@ import com.spring.SimpleApplicationContext;
  **/
 public class Test {
     public static void main(String[] args) {
-        SimpleApplicationContext applicationContext = new SimpleApplicationContext(BeanConfig.class);
+        SimpleApplicationContext applicationContext = new SimpleApplicationContext(AppConfig.class);
     }
 }
