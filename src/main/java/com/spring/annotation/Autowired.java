@@ -9,11 +9,7 @@ import java.lang.annotation.Target;
  * @author Jay
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Component {
-    /**
-     * beanName
-     * @return String
-     */
-    String value();
+@Target({ElementType.METHOD, ElementType.FIELD, ElementType.CONSTRUCTOR})
+public @interface Autowired {
+    boolean required() default true;
 }

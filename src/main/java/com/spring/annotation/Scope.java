@@ -10,10 +10,6 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface Component {
-    /**
-     * beanName
-     * @return String
-     */
+public @interface Scope {
     String value();
 }
