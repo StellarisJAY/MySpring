@@ -8,7 +8,6 @@ import com.spring.bean.BeanDefinition;
 import com.spring.bean.BeanRegistry;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,26 +35,30 @@ public class SimpleApplicationContext extends BeanRegistry {
             ClassLoader appClassLoader = SimpleApplicationContext.class.getClassLoader();
             // 组件扫描
             doComponentScan(basePackage, appClassLoader);
-
+            // 创建BeanDefinitionMap中的bean
             createBeans();
 
         }
     }
 
     public Object getBean(String beanName) {
+        // 获取beanDefinition
         BeanDefinition beanDefinition = getBeanDefinition(beanName);
+        // 没有beanDefinition记录，bean不存在
         if(beanDefinition == null){
             throw new RuntimeException("bean " + beanName + " doesnt exist");
         }
-        if("singleton".equals(beanDefinition.getScope()) && !beanDefinition.isLazyInit()){
+        // 单例非懒加载bean
+        if(beanDefinition.getScope() == BeanDefinition.SINGLETON && !beanDefinition.isLazyInit()){
             return getSingleton(beanName);
         }
+        // 懒加载单例bean
         else if(beanDefinition.isLazyInit()){
-            Object bean = createBean(beanName,beanDefinition);
-            registerSingleton(beanName, bean);
-            return bean;
+            // 创建bean
+            return createBean(beanName,beanDefinition);
         }
-        else if("prototype".equals(beanDefinition.getScope())){
+        // 原型bean
+        else if(beanDefinition.getScope() == BeanDefinition.PROTOTYPE){
             return createBean(beanName, beanDefinition);
         }
         return null;
@@ -74,6 +77,7 @@ public class SimpleApplicationContext extends BeanRegistry {
         String path = packageName.replace(".", "/");
         URL resource = classLoader.getResource(path);
         File file;
+        // 包路径存在
         if(resource != null && (file = new File(resource.getFile())).exists()){
             File[] files = file.listFiles();
             if(files != null){
@@ -97,21 +101,22 @@ public class SimpleApplicationContext extends BeanRegistry {
                                 Component component = clazz.getDeclaredAnnotation(Component.class);
                                 Scope scope = clazz.getDeclaredAnnotation(Scope.class);
                                 String beanName = component.value();
-
+                                // 创建该bean的beanDefinition
                                 BeanDefinition beanDefinition = new BeanDefinition(clazz);
                                 // 单例 bean
                                 if(scope == null || "singleton".equals(scope.value().toLowerCase())){
-                                    beanDefinition.setScope("singleton");
+                                    beanDefinition.setScope(BeanDefinition.SINGLETON);
                                     beanDefinition.setLazyInit(clazz.isAnnotationPresent(IsLazy.class));
                                 }
                                 // 原型 bean
                                 else if("prototype".equals(scope.value().toLowerCase())){
-                                    beanDefinition.setScope("prototype");
+                                    beanDefinition.setScope(BeanDefinition.PROTOTYPE);
                                 }
                                 // 无效的scope
                                 else{
                                     throw new RuntimeException("invalid scope " + scope.value() + " for bean " + beanName);
                                 }
+                                // 记录 beanDefinition
                                 addBeanDefinition(beanName, beanDefinition);
                             }
                         } catch (ClassNotFoundException ignored) {
@@ -123,12 +128,16 @@ public class SimpleApplicationContext extends BeanRegistry {
         }
     }
 
+    /**
+     * ComponentScan阶段的bean创建
+     */
     private void createBeans() {
+        // 获取beanDefinition
         ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
         for(String beanName : beanDefinitionMap.keySet()){
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
-            System.out.println("creating bean：" + beanName);
-            if("singleton".equals(beanDefinition.getScope()) && !beanDefinition.isLazyInit()){
+            // 创建非懒加载的单例bean
+            if(beanDefinition.getScope() == BeanDefinition.SINGLETON && !beanDefinition.isLazyInit()){
                 Object bean = createBean(beanName,beanDefinition);
             }
         }
