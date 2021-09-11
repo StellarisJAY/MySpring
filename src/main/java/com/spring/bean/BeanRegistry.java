@@ -2,9 +2,9 @@ package com.spring.bean;
 
 import com.spring.annotation.Autowired;
 import com.spring.annotation.Component;
-import com.spring.annotation.Scope;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
@@ -31,6 +31,7 @@ public class BeanRegistry {
      */
     private final HashMap<String, Object> earlySingletonObjects = new HashMap<>(256);
 
+    private final HashMap<String, ObjectFactory> singletonFactories = new HashMap<>(256);
     /**
      * 正在创建的 bean
      */
@@ -39,6 +40,8 @@ public class BeanRegistry {
      * bean Definition map
      */
     public final ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
+
+
     /**
      * 注册单例bean
      * @param beanName beanName
@@ -91,12 +94,17 @@ public class BeanRegistry {
         try {
             // 实例化
             instance = createInstance(constructor);
+            // 三级缓存记录原始对象，beanName，beanDefinition
+            singletonFactories.put(beanName, ()->registerEarlySingleton(beanName, beanDefinition, instance));
         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new RuntimeException("创建bean：" + beanName + "异常，无法实例化");
         }
 
+        populateFields(instance, beanName, beanDefinition);
+
+
         inCreation.remove(beanName);
-        if("singleton".equals(beanDefinition.getScope())){
+        if(beanDefinition.getScope() == BeanDefinition.SINGLETON){
             registerSingleton(beanName, instance);
         }
         return instance;
@@ -153,10 +161,8 @@ public class BeanRegistry {
         Object[] parameters = new Object[constructor.getParameterCount()];
         int index = 0;
         for (Parameter parameter : constructor.getParameters()) {
-            Class<?> paramClass = parameter.getType();
-            Component component = paramClass.getDeclaredAnnotation(Component.class);
-            String beanName = component.value().length() == 0 ? parameter.getName() : component.value();
-            BeanDefinition beanDefinition = getBeanDefinition(beanName);
+            //byName
+            String beanName = parameter.getName();
             // 从单例池中取对象
             if(singletonObjects.containsKey(beanName)){
                 parameters[index++] = singletonObjects.get(beanName);
@@ -168,6 +174,7 @@ public class BeanRegistry {
                 throw new RuntimeException("实例化 " + beanName + " 发生循环依赖");
             }
             else{
+                BeanDefinition beanDefinition = getBeanDefinition(beanName);
                 // 创建bean
                 parameters[index++] = createBean(beanName, beanDefinition);
             }
@@ -188,6 +195,71 @@ public class BeanRegistry {
     }
 
     protected Object getSingleton(String beanName){
-        return singletonObjects.get(beanName);
+        // 从单例池获取
+        Object singletonObject = singletonObjects.get(beanName);
+        // 单例池没有，且bean处于创建阶段，表示发生循环依赖
+        if(singletonObject == null && inCreation.contains(beanName)){
+            // 从二级缓存获取early singleton
+            singletonObject = earlySingletonObjects.get(beanName);
+            if(singletonObject == null){
+                synchronized (singletonObjects){
+                    // 从第三级缓存获取 bean创建方法
+                    ObjectFactory objectFactory = singletonFactories.get(beanName);
+                    if(objectFactory != null){
+                        singletonObject = objectFactory.getObject();
+                        this.earlySingletonObjects.put(beanName, singletonObject);
+                        this.singletonFactories.remove(beanName);
+                    }
+                }
+            }
+        }
+
+        return singletonObject;
+
+    }
+
+    /**
+     * 属性填充
+     * @param beanName beanName
+     * @param beanDefinition beanDefinition
+     */
+    private void populateFields(Object instance, String beanName, BeanDefinition beanDefinition){
+        Field[] fields = beanDefinition.getBeanClass().getDeclaredFields();
+        for (Field field : fields) {
+            if(field.isAnnotationPresent(Autowired.class)){
+                String autowireBeanName = field.getName();
+                BeanDefinition autowireBeanDef = getBeanDefinition(autowireBeanName);
+                // 类型不匹配
+                if(field.getType() != autowireBeanDef.getBeanClass()){
+                    throw new RuntimeException("需要的bean类型为 " + field.getType() + " ，找到的类型：" + autowireBeanDef.getBeanClass() + "不匹配");
+                }
+                Object autowireBean = singletonObjects.get(autowireBeanName);
+                if(autowireBean == null){
+                    // 正在创建的非懒加载单例
+                    if(autowireBeanDef.getScope() == BeanDefinition.SINGLETON && !autowireBeanDef.isLazyInit() && inCreation.contains(beanName)){
+                        // 使用getSingleton从三级缓存寻找
+                        autowireBean = getSingleton(autowireBeanName);
+                    }
+                    else{
+                        // 懒加载单例、未创建的单例、原型
+                        autowireBean = createBean(autowireBeanName, autowireBeanDef);
+                    }
+                }
+
+                if(autowireBean != null){
+                    field.setAccessible(true);
+                    try {
+                        field.set(instance, autowireBean);
+                    } catch (IllegalAccessException ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+
+    private Object registerEarlySingleton(String beanName, BeanDefinition beanDefinition, Object instance){
+        // do aop proxy here if necessary
+        return instance;
     }
 }

@@ -10,14 +10,15 @@ package com.spring.bean;
  **/
 public class BeanDefinition {
     private Class<?> beanClass;
-    private String scope;
+    private int scope;
     private boolean lazyInit;
-
+    public static final int SINGLETON = 1;
+    public  static final int PROTOTYPE = 2;
     public BeanDefinition(Class<?> beanClass) {
         this.beanClass = beanClass;
     }
 
-    public BeanDefinition(Class<?> beanClass, String scope, boolean lazyInit) {
+    public BeanDefinition(Class<?> beanClass, int scope, boolean lazyInit) {
         this.beanClass = beanClass;
         this.scope = scope;
         this.lazyInit = lazyInit;
@@ -31,11 +32,11 @@ public class BeanDefinition {
         this.beanClass = beanClass;
     }
 
-    public String getScope() {
+    public int getScope() {
         return scope;
     }
 
-    public void setScope(String scope) {
+    public void setScope(int scope) {
         this.scope = scope;
     }
 

@@ -1,9 +1,9 @@
 package com.jay;
 
 import com.jay.service.OrderService;
+import com.jay.service.UserService;
 import com.spring.context.SimpleApplicationContext;
 
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * <p>
@@ -16,9 +16,14 @@ import java.lang.reflect.InvocationTargetException;
 public class Test {
     public static void main(String[] args) {
         SimpleApplicationContext applicationContext = new SimpleApplicationContext(AppConfig.class);
+        OrderService orderService = (OrderService) applicationContext.getBean("orderService");
+        UserService userService = (UserService) applicationContext.getBean("userService");
 
-        System.out.println(applicationContext.getBean("userService"));
+        System.out.println(orderService);
+        userService.test();
 
-        ((OrderService)applicationContext.getBean("orderService")).test();
+        System.out.println(userService);
+        orderService.test();
+
     }
 }
