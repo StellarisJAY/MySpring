@@ -15,5 +15,5 @@ public @interface Component {
      * beanName
      * @return String
      */
-    String value();
+    String value() default "";
 }

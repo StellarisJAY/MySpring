@@ -101,6 +101,10 @@ public class SimpleApplicationContext extends BeanRegistry {
                                 Component component = clazz.getDeclaredAnnotation(Component.class);
                                 Scope scope = clazz.getDeclaredAnnotation(Scope.class);
                                 String beanName = component.value();
+                                // beanName 属性缺省，使用类名作为beanName
+                                if(beanName.length() == 0){
+                                    beanName = Character.toLowerCase(clazz.getSimpleName().charAt(0)) + clazz.getSimpleName().substring(1);
+                                }
                                 // 创建该bean的beanDefinition
                                 BeanDefinition beanDefinition = new BeanDefinition(clazz);
                                 // 单例 bean
