@@ -265,10 +265,16 @@ public class BeanRegistry {
                     if(autowireBeanDef.getScope() == BeanDefinition.SINGLETON && !autowireBeanDef.isLazyInit() && inCreation.contains(autowireBeanName)){
                         // 使用getSingleton从三个缓存寻找
                         autowireBean = getSingleton(autowireBeanName);
+                        // 如果没有找到该bean
                         if(autowireBean == null){
+                            /*
+                                如果singletonFactories中没有该bean的创建方法，表示该bean还没有经过实例化阶段
+                                即构造方法注入发生了循环依赖
+                             */
                             if(!singletonFactories.containsKey(autowireBeanName)){
                                 throw new RuntimeException("实例化 " + autowireBeanName +  " 发生循环依赖");
                             }
+                            // bean 不存在
                             else{
                                 throw new RuntimeException("无法找到 beanName=" + autowireBeanName + " 的实例");
                             }
