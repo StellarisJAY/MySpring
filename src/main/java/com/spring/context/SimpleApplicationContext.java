@@ -135,6 +135,7 @@ public class SimpleApplicationContext extends BeanRegistry {
         // 获取beanDefinition
         ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
         for(String beanName : beanDefinitionMap.keySet()){
+            System.out.println("creating bean : " + beanName);
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
             // 创建非懒加载的单例bean
             if(beanDefinition.getScope() == BeanDefinition.SINGLETON && !beanDefinition.isLazyInit()){
