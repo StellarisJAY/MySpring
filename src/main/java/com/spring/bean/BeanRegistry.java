@@ -196,7 +196,7 @@ public class BeanRegistry {
             // 目标bean未在创建中，调用createBean创建目标bean
             else{
                 BeanDefinition beanDefinition = getBeanDefinition(beanName);
-                // 创建bean
+                // 注入bean
                 parameters[index++] = createBean(beanName, beanDefinition);
             }
 
@@ -265,6 +265,14 @@ public class BeanRegistry {
                     if(autowireBeanDef.getScope() == BeanDefinition.SINGLETON && !autowireBeanDef.isLazyInit() && inCreation.contains(autowireBeanName)){
                         // 使用getSingleton从三个缓存寻找
                         autowireBean = getSingleton(autowireBeanName);
+                        if(autowireBean == null){
+                            if(!singletonFactories.containsKey(autowireBeanName)){
+                                throw new RuntimeException("实例化 " + autowireBeanName +  " 发生循环依赖");
+                            }
+                            else{
+                                throw new RuntimeException("无法找到 beanName=" + autowireBeanName + " 的实例");
+                            }
+                        }
                     }
                     else{
                         // 懒加载单例、未创建的单例、原型
