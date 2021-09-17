@@ -1,13 +1,11 @@
 package com.spring.aop.proxy;
 
-import jdk.nashorn.internal.runtime.regexp.joni.Matcher;
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
+import com.spring.aop.JoinPoint;
+import com.spring.aop.MethodWrapper;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * <p>
@@ -20,9 +18,32 @@ import java.util.regex.Pattern;
 public class ProxyFactory {
 
     /**
-     * aop 前置通知 map
+     * AOP 前置通知方法过滤器
      */
-    private HashMap<String, Method> beforeMap = new HashMap<>(256);
+    private List<MethodWrapper> beforeFilters = new LinkedList<>();
+
+    /**
+     * 方法过滤类型枚举
+     */
+    public enum MethodFilterType{
+        /**
+         * 前置类型
+         */
+        BEFORE,
+        /**
+         * 后置类型
+         */
+        AFTER_RETURN,
+        /**
+         * 返回前类型
+         */
+        BEFORE_RETURN,
+        /**
+         * 异常捕获类型
+         */
+        THROWS_EXCEPTION
+
+    }
 
     /**
      * aop 后置通知 map
@@ -33,22 +54,20 @@ public class ProxyFactory {
         // 类是否实现接口
         if(hasInterface(targetClass)){
             // 有实现接口，使用JDK Proxy生成代理对象
-            Object proxyInstance = Proxy.newProxyInstance(targetClass.getClassLoader(), targetClass.getInterfaces(), new InvocationHandler() {
-                @Override
-                public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                    List<Method> beforeMethods = getBeforeChain(method);
-
-
-
-                    // 业务逻辑
-                    Object result = method.invoke(target, args);
-
-
-
-                    return result;
+            return Proxy.newProxyInstance(targetClass.getClassLoader(), targetClass.getInterfaces(), (proxy, method, args) -> {
+                List<MethodWrapper> beforeMethods = getBeforeChain(method);
+                JoinPoint beforeJoinPoint = new JoinPoint(target, targetClass, args);
+                for (MethodWrapper beforeMethod : beforeMethods) {
+                    beforeMethod.invoke(beforeJoinPoint);
                 }
+
+                // 业务逻辑
+                Object result = method.invoke(target, args);
+
+
+
+                return result;
             });
-            return proxyInstance;
         }
         return target;
     }
@@ -62,15 +81,11 @@ public class ProxyFactory {
      * @param method 被代理方法
      * @return List
      */
-    public List<Method> getBeforeChain(Method method){
-        String methodName = method.toString();
-        String[] content = methodName.split(" ");
-        List<Method> beforeMethods = new ArrayList<>();
-        Set<String> keySet = beforeMap.keySet();
-        for (String s : keySet) {
-            System.out.println(s);
-            if(methodMatches(s, method)){
-                beforeMethods.add(beforeMap.get(s));
+    public List<MethodWrapper> getBeforeChain(Method method){
+        List<MethodWrapper> beforeMethods = new ArrayList<>();
+        for (MethodWrapper m : beforeFilters) {
+            if(methodMatches(m.getPattern(), method)){
+                beforeMethods.add(m);
             }
         }
         System.out.println(beforeMethods);
@@ -88,7 +103,7 @@ public class ProxyFactory {
         String returnType = method.getReturnType().getName();
         String methodName = method.getDeclaringClass().getName() + "." + method.getName();
         // 返回值类型不匹配
-        if(!matches(patterns[0], returnType) || !matches(patterns[1], methodName)){
+        if(matches(patterns[0], returnType) || matches(patterns[1], methodName)){
             return false;
         }
         String sub1 = patterns[2].substring(patterns[2].indexOf("(") + 1);
@@ -103,7 +118,7 @@ public class ProxyFactory {
                 return false;
             }
             String paramType = method.getParameters()[i].getType().getName();
-            if(!matches(param, paramType)){
+            if(matches(param, paramType)){
                 return false;
             }
         }
@@ -124,18 +139,25 @@ public class ProxyFactory {
             if(beforeSymbol.length() > 0 && afterSymbol.length() > 0){
                 int beforeEnd = s.indexOf(beforeSymbol) + beforeSymbol.length();
                 int endStart = s.indexOf(afterSymbol);
-                return beforeEnd < endStart;
+                return beforeEnd >= endStart;
             }
             else if(beforeSymbol.length() > 0){
-                return s.indexOf(beforeSymbol) == 0;
+                return s.indexOf(beforeSymbol) != 0;
             }
             else if(afterSymbol.length() > 0){
-                return s.contains(afterSymbol);
+                return !s.contains(afterSymbol);
             }
             else{
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
+
+    public void registerMethodFilter(MethodWrapper methodWrapper, MethodFilterType type){
+        if(type == MethodFilterType.BEFORE){
+            beforeFilters.add(methodWrapper);
+        }
+    }
+
 }

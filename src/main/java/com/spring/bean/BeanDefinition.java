@@ -32,6 +32,11 @@ public class BeanDefinition {
      */
     private boolean postProcess;
 
+    /**
+     * 是否是切面
+     */
+    private boolean aspect;
+
     public static final int SINGLETON = 1;
     public  static final int PROTOTYPE = 2;
     public BeanDefinition(Class<?> beanClass) {
@@ -82,6 +87,14 @@ public class BeanDefinition {
 
     public void setInterfaces(Class<?>[] interfaces) {
         this.interfaces = interfaces;
+    }
+
+    public boolean isAspect() {
+        return aspect;
+    }
+
+    public void setAspect(boolean aspect) {
+        this.aspect = aspect;
     }
 
     @Override

@@ -42,7 +42,7 @@ public class BeanRegistry {
      */
     public final ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
 
-    private final ProxyFactory proxyFactory = new ProxyFactory();
+    protected final ProxyFactory proxyFactory = new ProxyFactory();
     /**
      * 注册单例bean
      * @param beanName beanName
