@@ -9,9 +9,34 @@ package com.spring.bean;
  * @date 2021/9/10
  **/
 public class BeanDefinition {
+    /**
+     * bean 类型
+     */
     private Class<?> beanClass;
+    /**
+     * 作用域
+     */
     private int scope;
+    /**
+     * 是否懒加载
+     */
     private boolean lazyInit;
+
+    /**
+     * 实现的接口
+     */
+    private Class<?>[] interfaces;
+
+    /**
+     * 是否有后置处理器
+     */
+    private boolean postProcess;
+
+    /**
+     * 是否是切面
+     */
+    private boolean aspect;
+
     public static final int SINGLETON = 1;
     public  static final int PROTOTYPE = 2;
     public BeanDefinition(Class<?> beanClass) {
@@ -46,6 +71,30 @@ public class BeanDefinition {
 
     public void setLazyInit(boolean lazyInit) {
         this.lazyInit = lazyInit;
+    }
+
+    public boolean isPostProcess() {
+        return postProcess;
+    }
+
+    public void setPostProcess(boolean postProcess) {
+        this.postProcess = postProcess;
+    }
+
+    public Class<?>[] getInterfaces() {
+        return interfaces;
+    }
+
+    public void setInterfaces(Class<?>[] interfaces) {
+        this.interfaces = interfaces;
+    }
+
+    public boolean isAspect() {
+        return aspect;
+    }
+
+    public void setAspect(boolean aspect) {
+        this.aspect = aspect;
     }
 
     @Override

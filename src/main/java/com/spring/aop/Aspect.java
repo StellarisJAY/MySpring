@@ -6,6 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 指定一个类作为切面
  * @author Jay
  */
 @Retention(RetentionPolicy.RUNTIME)

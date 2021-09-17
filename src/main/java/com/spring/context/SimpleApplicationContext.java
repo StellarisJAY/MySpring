@@ -4,11 +4,19 @@ import com.spring.annotation.Component;
 import com.spring.annotation.ComponentScan;
 import com.spring.annotation.IsLazy;
 import com.spring.annotation.Scope;
+import com.spring.aop.Aspect;
+import com.spring.aop.Before;
+import com.spring.aop.MethodWrapper;
+import com.spring.aop.proxy.ProxyFactory;
 import com.spring.bean.BeanDefinition;
+import com.spring.bean.BeanPostProcessor;
 import com.spring.bean.BeanRegistry;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,6 +43,8 @@ public class SimpleApplicationContext extends BeanRegistry {
             ClassLoader appClassLoader = SimpleApplicationContext.class.getClassLoader();
             // 组件扫描
             doComponentScan(basePackage, appClassLoader);
+
+            createAspects();
             // 创建BeanDefinitionMap中的bean
             createBeans();
 
@@ -96,6 +106,21 @@ public class SimpleApplicationContext extends BeanRegistry {
                         try {
                             // classLoader加载该类
                             Class<?> clazz = classLoader.loadClass(filename);
+                            // 创建该bean的beanDefinition
+                            BeanDefinition beanDefinition = new BeanDefinition(clazz);
+                            List<Class<?>> interfaces = new ArrayList<>();
+                            // 扫描beanClass 的接口
+                            for(Class<?> impl : clazz.getInterfaces()){
+                                if(impl == BeanPostProcessor.class){
+                                    beanDefinition.setPostProcess(true);
+                                }
+                                else{
+                                    interfaces.add(impl);
+                                }
+                            }
+                            // 设置bean的接口
+                            beanDefinition.setInterfaces(interfaces.toArray(new Class[0]));
+
                             // 判断是否有 @Component注解
                             if(clazz.isAnnotationPresent(Component.class)){
                                 Component component = clazz.getDeclaredAnnotation(Component.class);
@@ -105,8 +130,7 @@ public class SimpleApplicationContext extends BeanRegistry {
                                 if(beanName.length() == 0){
                                     beanName = Character.toLowerCase(clazz.getSimpleName().charAt(0)) + clazz.getSimpleName().substring(1);
                                 }
-                                // 创建该bean的beanDefinition
-                                BeanDefinition beanDefinition = new BeanDefinition(clazz);
+
                                 // 单例 bean
                                 if(scope == null || "singleton".equals(scope.value().toLowerCase())){
                                     beanDefinition.setScope(BeanDefinition.SINGLETON);
@@ -119,6 +143,15 @@ public class SimpleApplicationContext extends BeanRegistry {
                                 // 无效的scope
                                 else{
                                     throw new RuntimeException("invalid scope " + scope.value() + " for bean " + beanName);
+                                }
+
+                                // 设置切面类
+                                if(clazz.isAnnotationPresent(Aspect.class)){
+                                    beanDefinition.setLazyInit(false);
+                                    beanDefinition.setScope(BeanDefinition.SINGLETON);
+                                    beanDefinition.setAspect(true);
+                                }else{
+                                    beanDefinition.setAspect(false);
                                 }
                                 // 记录 beanDefinition
                                 addBeanDefinition(beanName, beanDefinition);
@@ -138,12 +171,41 @@ public class SimpleApplicationContext extends BeanRegistry {
     private void createBeans() {
         // 获取beanDefinition
         ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
+
         for(String beanName : beanDefinitionMap.keySet()){
             System.out.println("creating bean : " + beanName);
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
-            // 创建非懒加载的单例bean
-            if(beanDefinition.getScope() == BeanDefinition.SINGLETON && !beanDefinition.isLazyInit()){
-                Object bean = createBean(beanName,beanDefinition);
+            if(beanDefinition.getScope() == BeanDefinition.SINGLETON && !beanDefinition.isLazyInit() && !beanDefinition.isAspect()){
+                Object instance = createBean(beanName, beanDefinition);
+            }
+        }
+    }
+
+    /**
+     * 创建切面对象
+     */
+    private void createAspects(){
+        ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
+        for(String beanName : beanDefinitionMap.keySet()){
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            // 判断bean是否是切面
+            if(beanDefinition.isAspect()){
+                // 创建bean
+                Object instance = createBean(beanName, beanDefinition);
+                Class<?> beanClass = beanDefinition.getBeanClass();
+                Method[] methods = beanClass.getDeclaredMethods();
+                // 对通知方法进行封装和记录
+                for(Method method : methods){
+                    // before
+                    if(method.isAnnotationPresent(Before.class)){
+                        Before before = method.getAnnotation(Before.class);
+                        if(before.value().length() == 0){
+                            throw new RuntimeException("@Before注解必须带有value属性");
+                        }
+                        MethodWrapper methodWrapper = new MethodWrapper(before.value(), instance, method);
+                        proxyFactory.registerMethodFilter(methodWrapper, ProxyFactory.MethodFilterType.BEFORE);
+                    }
+                }
             }
         }
     }
