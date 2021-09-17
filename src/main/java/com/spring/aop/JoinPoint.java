@@ -1,5 +1,7 @@
 package com.spring.aop;
 
+import java.util.Arrays;
+
 /**
  * <p>
  *
@@ -29,5 +31,14 @@ public class JoinPoint {
 
     public Object[] getTargetArgs() {
         return targetArgs;
+    }
+
+    @Override
+    public String toString() {
+        return "JoinPoint{" +
+                "target=" + target +
+                ", targetClass=" + targetClass +
+                ", targetArgs=" + Arrays.toString(targetArgs) +
+                '}';
     }
 }

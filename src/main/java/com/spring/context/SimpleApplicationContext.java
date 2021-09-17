@@ -181,15 +181,22 @@ public class SimpleApplicationContext extends BeanRegistry {
         }
     }
 
+    /**
+     * 创建切面对象
+     */
     private void createAspects(){
         ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = super.beanDefinitionMap;
         for(String beanName : beanDefinitionMap.keySet()){
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            // 判断bean是否是切面
             if(beanDefinition.isAspect()){
+                // 创建bean
                 Object instance = createBean(beanName, beanDefinition);
                 Class<?> beanClass = beanDefinition.getBeanClass();
                 Method[] methods = beanClass.getDeclaredMethods();
+                // 对通知方法进行封装和记录
                 for(Method method : methods){
+                    // before
                     if(method.isAnnotationPresent(Before.class)){
                         Before before = method.getAnnotation(Before.class);
                         if(before.value().length() == 0){

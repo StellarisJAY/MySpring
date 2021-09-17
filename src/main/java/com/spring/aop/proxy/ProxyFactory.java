@@ -88,7 +88,6 @@ public class ProxyFactory {
                 beforeMethods.add(m);
             }
         }
-        System.out.println(beforeMethods);
         return beforeMethods;
     }
 
