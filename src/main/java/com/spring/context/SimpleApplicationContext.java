@@ -4,8 +4,9 @@ import com.spring.annotation.Component;
 import com.spring.annotation.ComponentScan;
 import com.spring.annotation.IsLazy;
 import com.spring.annotation.Scope;
-import com.spring.aop.Aspect;
-import com.spring.aop.Before;
+import com.spring.aop.annotation.AfterReturn;
+import com.spring.aop.annotation.Aspect;
+import com.spring.aop.annotation.Before;
 import com.spring.aop.MethodWrapper;
 import com.spring.aop.proxy.ProxyFactory;
 import com.spring.bean.BeanDefinition;
@@ -196,14 +197,23 @@ public class SimpleApplicationContext extends BeanRegistry {
                 Method[] methods = beanClass.getDeclaredMethods();
                 // 对通知方法进行封装和记录
                 for(Method method : methods){
+                    MethodWrapper methodWrapper = null;
                     // before
                     if(method.isAnnotationPresent(Before.class)){
                         Before before = method.getAnnotation(Before.class);
                         if(before.value().length() == 0){
                             throw new RuntimeException("@Before注解必须带有value属性");
                         }
-                        MethodWrapper methodWrapper = new MethodWrapper(before.value(), instance, method);
+                        methodWrapper= new MethodWrapper(before.value(), instance, method);
                         proxyFactory.registerMethodFilter(methodWrapper, ProxyFactory.MethodFilterType.BEFORE);
+                    }
+                    if(method.isAnnotationPresent(AfterReturn.class)){
+                        AfterReturn afterReturn = method.getAnnotation(AfterReturn.class);
+                        if(afterReturn.value().length() == 0){
+                            throw new RuntimeException("@AfterReturn 必须有value属性");
+                        }
+                        methodWrapper = new MethodWrapper(afterReturn.value(), instance, method);
+                        proxyFactory.registerMethodFilter(methodWrapper, ProxyFactory.MethodFilterType.AFTER_RETURN);
                     }
                 }
             }

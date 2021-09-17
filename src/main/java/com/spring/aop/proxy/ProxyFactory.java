@@ -21,7 +21,7 @@ public class ProxyFactory {
      * AOP 前置通知方法过滤器
      */
     private List<MethodWrapper> beforeFilters = new LinkedList<>();
-
+    private List<MethodWrapper> afterFilters = new LinkedList<>();
     /**
      * 方法过滤类型枚举
      */
@@ -34,10 +34,6 @@ public class ProxyFactory {
          * 后置类型
          */
         AFTER_RETURN,
-        /**
-         * 返回前类型
-         */
-        BEFORE_RETURN,
         /**
          * 异常捕获类型
          */
@@ -56,17 +52,27 @@ public class ProxyFactory {
             // 有实现接口，使用JDK Proxy生成代理对象
             return Proxy.newProxyInstance(targetClass.getClassLoader(), targetClass.getInterfaces(), (proxy, method, args) -> {
                 List<MethodWrapper> beforeMethods = getBeforeChain(method);
+                // 执行before方法链
                 JoinPoint beforeJoinPoint = new JoinPoint(target, targetClass, args);
                 for (MethodWrapper beforeMethod : beforeMethods) {
                     beforeMethod.invoke(beforeJoinPoint);
                 }
 
-                // 业务逻辑
-                Object result = method.invoke(target, args);
+                try{
+                    // 业务逻辑
+                    Object result = method.invoke(target, args);
 
-
-
-                return result;
+                    // 执行afterReturn 方法
+                    List<MethodWrapper> afterReturnChain = getAfterReturnChain(method);
+                    JoinPoint returnJoinPoint = new JoinPoint(target, targetClass, result);
+                    for (MethodWrapper methodWrapper : afterReturnChain) {
+                        methodWrapper.invoke(returnJoinPoint);
+                    }
+                    return result;
+                }catch (Exception e){
+                    JoinPoint exceptionJoinPoint = new JoinPoint(target, targetClass, e);
+                }
+                return null;
             });
         }
         return target;
@@ -89,6 +95,16 @@ public class ProxyFactory {
             }
         }
         return beforeMethods;
+    }
+
+    public List<MethodWrapper> getAfterReturnChain(Method method){
+        List<MethodWrapper> afterMethods = new ArrayList<>();
+        for (MethodWrapper m : afterFilters) {
+            if(methodMatches(m.getPattern(), method)){
+                afterMethods.add(m);
+            }
+        }
+        return afterMethods;
     }
 
     /**
@@ -156,6 +172,9 @@ public class ProxyFactory {
     public void registerMethodFilter(MethodWrapper methodWrapper, MethodFilterType type){
         if(type == MethodFilterType.BEFORE){
             beforeFilters.add(methodWrapper);
+        }
+        else if(type == MethodFilterType.AFTER_RETURN){
+            afterFilters.add(methodWrapper);
         }
     }
 
