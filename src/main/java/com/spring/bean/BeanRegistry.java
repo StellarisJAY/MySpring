@@ -261,8 +261,16 @@ public class BeanRegistry {
                 String autowireBeanName = field.getName();
                 // 被注入的beanDefinition
                 BeanDefinition autowireBeanDef = getBeanDefinition(autowireBeanName);
+                // 判断要注入的类型是否是接口
+                boolean autowireInterface = false;
+                for (Class<?> anInterface : autowireBeanDef.getInterfaces()) {
+                    if(anInterface == field.getType()){
+                        autowireInterface = true;
+                        break;
+                    }
+                }
                 // 类型不匹配
-                if(field.getType() != autowireBeanDef.getBeanClass()){
+                if(field.getType() != autowireBeanDef.getBeanClass() && !autowireInterface){
                     throw new RuntimeException("需要的bean类型为 " + field.getType() + " ，找到的类型：" + autowireBeanDef.getBeanClass() + "不匹配");
                 }
                 // 尝试从单例池获取bean
