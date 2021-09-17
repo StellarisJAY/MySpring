@@ -14,6 +14,20 @@ public class JoinPoint {
     private Object target;
     private Class<?> targetClass;
     private Object[] targetArgs;
+    private Object targetReturn;
+    private Exception exception;
+
+    public JoinPoint(Object target, Class<?> targetClass, Exception exception) {
+        this.target = target;
+        this.targetClass = targetClass;
+        this.exception = exception;
+    }
+
+    public JoinPoint(Object target, Class<?> targetClass, Object targetReturn) {
+        this.target = target;
+        this.targetClass = targetClass;
+        this.targetReturn = targetReturn;
+    }
 
     public JoinPoint(Object target, Class<?> targetClass, Object[] targetArgs) {
         this.target = target;
