@@ -2,6 +2,7 @@ package com.spring.bean;
 
 import com.spring.annotation.Autowired;
 import com.spring.annotation.Component;
+import com.spring.aop.proxy.ProxyFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -41,7 +42,7 @@ public class BeanRegistry {
      */
     public final ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
 
-
+    private final ProxyFactory proxyFactory = new ProxyFactory();
     /**
      * 注册单例bean
      * @param beanName beanName
@@ -104,20 +105,27 @@ public class BeanRegistry {
             // 实例化
             instance = createInstance(constructor);
             // 三级缓存记录原始对象，beanName，beanDefinition
-            //singletonFactories.put(beanName, ()->registerEarlySingleton(beanName, beanDefinition, instance));
-            singletonFactories.put(beanName, ()->instance);
+            singletonFactories.put(beanName, ()->registerEarlySingleton(beanName, beanDefinition, instance));
+//            singletonFactories.put(beanName, ()->instance);
         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new RuntimeException("创建bean：" + beanName + "异常，无法实例化");
         }
 
+
+        // 属性注入
         populateFields(instance, beanName, beanDefinition);
 
-
+        /*
+            判断是否已经完成了 aop
+            如果完成了aop，第三级缓存不会有bean的factory
+         */
+        ObjectFactory objectFactory = singletonFactories.get(beanName);
+        Object bean =  objectFactory == null ? instance : objectFactory.getObject();
         inCreation.remove(beanName);
         if(beanDefinition.getScope() == BeanDefinition.SINGLETON){
-            registerSingleton(beanName, instance);
+            registerSingleton(beanName, bean);
         }
-        return instance;
+        return bean;
     }
 
     /**
@@ -299,6 +307,9 @@ public class BeanRegistry {
 
 
     private Object registerEarlySingleton(String beanName, BeanDefinition beanDefinition, Object instance){
+        if(beanDefinition.getInterfaces() != null){
+            return proxyFactory.createProxyInstance(beanDefinition.getBeanClass(), instance);
+        }
         // do aop proxy here if necessary
         return instance;
     }
