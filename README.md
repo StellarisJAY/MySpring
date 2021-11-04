@@ -13,7 +13,7 @@
 
 ## 与原版Spring区别
 
-1. @Autowired：不同于Spring采用的byType后再byName筛选，MySpring直接采用byName方式匹配。
+1. @Autowired：不同于Spring采用的byType筛选，MySpring采用byName方式匹配。
 2. AOP：MySpring的AOP只有在类实现了接口时才生效，且只是用JDK动态代理。不会向原版Spring一样使用Cglib来生成代理。
 3. 目前只打算实现@ComponentScan扫描bean和@Bean两种bean声明方式。
 4. AOP：简化了切入点表达式，可能无法支持复杂的业务场景
